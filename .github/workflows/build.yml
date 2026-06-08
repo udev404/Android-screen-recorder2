@@ -15,6 +15,18 @@ jobs:
       - name: Extract pro.zip
         run: |
           unzip pro.zip
+          echo "=== Extracted files ==="
+          ls -la
+          
+          # ScreenCastPro klasörü varsa içine gir
+          if [ -d "ScreenCastPro" ]; then
+            cd ScreenCastPro
+          fi
+          
+          # Şu anki dizini kaydet
+          echo "PWD=$(pwd)" >> $GITHUB_ENV
+          echo "=== Current directory ==="
+          pwd
           ls -la
 
       - name: Setup JDK 17
@@ -47,11 +59,18 @@ jobs:
           echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
 
       - name: Build APK
-        run: gradle assembleDebug --stacktrace --no-daemon
+        run: |
+          # ScreenCastPro klasörü varsa içine gir
+          if [ -d "ScreenCastPro" ]; then
+            cd ScreenCastPro
+          fi
+          gradle assembleDebug --stacktrace --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
           path: |
+            ScreenCastPro/app/build/outputs/apk/debug/*.apk
             app/build/outputs/apk/debug/*.apk
+            **/app/build/outputs/apk/debug/*.apk
