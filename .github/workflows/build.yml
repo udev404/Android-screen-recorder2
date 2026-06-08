@@ -31,20 +31,13 @@ jobs:
         with:
           gradle-version: 8.4
 
-      # Runner'ın hazır Android SDK'sını kullan (kendi SDK'mızı kurmuyoruz)
-      - name: Setup Android SDK and NDK
+      # Runner'ın hazır SDK'sını kullan - sadece environment variable'ları ayarla
+      - name: Use preinstalled Android SDK
         run: |
-          # Runner'ın SDK path'ini kullan
           echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> $GITHUB_ENV
-          
-          # NDK'yi kontrol et (varsa)
-          if [ ! -d "$ANDROID_HOME/ndk/25.1.8937393" ]; then
-            echo "Installing NDK 25.1.8937393..."
-            sdkmanager "ndk;25.1.8937393"
-          fi
-          
-          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.1.8937393" >> $GITHUB_ENV
+          echo "Using Android SDK at: $ANDROID_HOME"
+          ls -la $ANDROID_HOME/
 
       - name: Build APK
         run: |
@@ -58,6 +51,4 @@ jobs:
         with:
           name: app-debug
           path: |
-            ScreenCastPro/app/build/outputs/apk/debug/*.apk
-            app/build/outputs/apk/debug/*.apk
             **/app/build/outputs/apk/debug/*.apk
