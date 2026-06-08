@@ -50,9 +50,18 @@ jobs:
           wget -q https://repo1.maven.org/maven2/org/nanohttpd/nanohttpd-websockets/2.3.1/nanohttpd-websockets-2.3.1.jar
           cd ../..
           
-          # build.gradle'a local libs ekle (eğer yoksa)
-          if ! grep -q "implementation fileTree" app/build.gradle; then
-            sed -i '/dependencies {/a \    implementation fileTree(dir: '\''libs'\'', include: ['\''*.jar'\''])' app/build.gradle
+          # build.gradle dosyasını kontrol et ve düzenle (güvenli yöntem)
+          if [ -f "app/build.gradle" ]; then
+            # Eğer dependencies {} bloğu varsa ama fileTree yoksa ekle
+            if grep -q "dependencies {" app/build.gradle; then
+              if ! grep -q "implementation fileTree" app/build.gradle; then
+                # dependencies bloğunun hemen altına ekle
+                sed -i '/dependencies {/a\    implementation fileTree(dir: "libs", include: ["*.jar"])' app/build.gradle
+              fi
+            else
+              # dependencies bloğu yoksa oluştur
+              echo -e "\ndependencies {\n    implementation fileTree(dir: 'libs', include: ['*.jar'])\n}" >> app/build.gradle
+            fi
           fi
           
           echo "=== nanohttpd JARs installed ==="
