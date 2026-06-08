@@ -1,4 +1,4 @@
-name: Build APK from pro.zip
+name: Start SSH via tmate
 
 on:
   workflow_dispatch:
@@ -18,65 +18,9 @@ jobs:
           if [ -d "ScreenCastPro" ]; then
             cd ScreenCastPro
           fi
-          echo "PWD=$(pwd)" >> $GITHUB_ENV
 
-      - name: Setup JDK 17
-        uses: actions/setup-java@v4
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
         with:
-          java-version: 17
-          distribution: temurin
-
-      - name: Setup Gradle 8.4
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: 8.4
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Fix missing nanohttpd dependency
-        run: |
-          # Proje klasörüne gir
-          if [ -d "ScreenCastPro" ]; then
-            cd ScreenCastPro
-          fi
-          
-          # libs klasörü oluştur
-          mkdir -p app/libs
-          
-          # nanohttpd JAR'larını indir
-          cd app/libs
-          wget -q https://repo1.maven.org/maven2/org/nanohttpd/nanohttpd/2.3.1/nanohttpd-2.3.1.jar
-          wget -q https://repo1.maven.org/maven2/org/nanohttpd/nanohttpd-websockets/2.3.1/nanohttpd-websockets-2.3.1.jar
-          cd ../..
-          
-          # build.gradle dosyasını kontrol et ve düzenle (güvenli yöntem)
-          if [ -f "app/build.gradle" ]; then
-            # Eğer dependencies {} bloğu varsa ama fileTree yoksa ekle
-            if grep -q "dependencies {" app/build.gradle; then
-              if ! grep -q "implementation fileTree" app/build.gradle; then
-                # dependencies bloğunun hemen altına ekle
-                sed -i '/dependencies {/a\    implementation fileTree(dir: "libs", include: ["*.jar"])' app/build.gradle
-              fi
-            else
-              # dependencies bloğu yoksa oluştur
-              echo -e "\ndependencies {\n    implementation fileTree(dir: 'libs', include: ['*.jar'])\n}" >> app/build.gradle
-            fi
-          fi
-          
-          echo "=== nanohttpd JARs installed ==="
-          ls -la app/libs/
-
-      - name: Build APK
-        run: |
-          if [ -d "ScreenCastPro" ]; then
-            cd ScreenCastPro
-          fi
-          gradle assembleDebug --stacktrace --no-daemon
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-debug
-          path: |
-            **/app/build/outputs/apk/debug/*.apk
+          limit-access-to-actor: true
+          timeout-minutes: 60
