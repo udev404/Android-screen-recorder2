@@ -1,0 +1,92 @@
+name: Build APK from pro.zip
+
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract pro.zip
+        run: |
+          unzip pro.zip
+          echo "=== Extracted files ==="
+          ls -la
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: temurin
+
+      - name: Download gradle-wrapper.jar
+        run: |
+          mkdir -p gradle/wrapper
+          curl -L -o gradle/wrapper/gradle-wrapper.jar https://github.com/gradle/gradle/raw/v8.2/gradle/wrapper/gradle-wrapper.jar
+          
+          cat > gradlew << 'EOF'
+          #!/bin/sh
+          APP_HOME=$(cd "$(dirname "$0")" && pwd)
+          exec java -jar "$APP_HOME/gradle/wrapper/gradle-wrapper.jar" "$@"
+          EOF
+          
+          chmod +x gradlew
+          echo "=== Gradle wrapper created ==="
+          ls -la gradlew
+          ls -la gradle/wrapper/
+
+      - name: Setup Android SDK and NDK
+        run: |
+          mkdir -p android-sdk/cmdline-tools
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q commandlinetools-linux-*.zip
+          mv cmdline-tools android-sdk/cmdline-tools/latest
+          export ANDROID_HOME=$PWD/android-sdk
+          export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
+          
+          # Lisansları kabul et
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+          
+          # Platform ve build tools
+          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          
+          # NDK kur (C++ kod için)
+          sdkmanager "ndk;25.1.8937393"
+          
+          # CMake kur (NDK ile birlikte)
+          sdkmanager "cmake;3.22.1"
+          
+          # Environment variables
+          echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.1.8937393" >> $GITHUB_ENV
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
+          
+          echo "=== Android SDK and NDK ready ==="
+
+      - name: Build APK
+        run: |
+          echo "=== Starting build ==="
+          ./gradlew assembleDebug --stacktrace --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: |
+            app/build/outputs/apk/debug/*.apk
+            **/app/build/outputs/apk/debug/*.apk
+
+      - name: Upload build logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            **/.gradle/
+            **/build/reports/
+            **/build/outputs/logs/
