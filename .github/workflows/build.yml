@@ -31,13 +31,32 @@ jobs:
         with:
           gradle-version: 8.4
 
-      # Runner'ın hazır SDK'sını kullan - sadece environment variable'ları ayarla
-      - name: Use preinstalled Android SDK
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Fix missing nanohttpd dependency
         run: |
-          echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
-          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> $GITHUB_ENV
-          echo "Using Android SDK at: $ANDROID_HOME"
-          ls -la $ANDROID_HOME/
+          # Proje klasörüne gir
+          if [ -d "ScreenCastPro" ]; then
+            cd ScreenCastPro
+          fi
+          
+          # libs klasörü oluştur
+          mkdir -p app/libs
+          
+          # nanohttpd JAR'larını indir
+          cd app/libs
+          wget -q https://repo1.maven.org/maven2/org/nanohttpd/nanohttpd/2.3.1/nanohttpd-2.3.1.jar
+          wget -q https://repo1.maven.org/maven2/org/nanohttpd/nanohttpd-websockets/2.3.1/nanohttpd-websockets-2.3.1.jar
+          cd ../..
+          
+          # build.gradle'a local libs ekle (eğer yoksa)
+          if ! grep -q "implementation fileTree" app/build.gradle; then
+            sed -i '/dependencies {/a \    implementation fileTree(dir: '\''libs'\'', include: ['\''*.jar'\''])' app/build.gradle
+          fi
+          
+          echo "=== nanohttpd JARs installed ==="
+          ls -la app/libs/
 
       - name: Build APK
         run: |
