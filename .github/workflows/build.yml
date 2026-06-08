@@ -31,23 +31,20 @@ jobs:
         with:
           gradle-version: 8.4
 
+      # Runner'ın hazır Android SDK'sını kullan (kendi SDK'mızı kurmuyoruz)
       - name: Setup Android SDK and NDK
         run: |
-          mkdir -p android-sdk/cmdline-tools
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-          unzip -q commandlinetools-linux-*.zip
-          mv cmdline-tools android-sdk/cmdline-tools/latest
-          export ANDROID_HOME=$PWD/android-sdk
-          export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
-          
-          yes | sdkmanager --licenses > /dev/null 2>&1 || true
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
-          sdkmanager "ndk;25.1.8937393"
-          sdkmanager "cmake;3.22.1"
-          
+          # Runner'ın SDK path'ini kullan
           echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> $GITHUB_ENV
+          
+          # NDK'yi kontrol et (varsa)
+          if [ ! -d "$ANDROID_HOME/ndk/25.1.8937393" ]; then
+            echo "Installing NDK 25.1.8937393..."
+            sdkmanager "ndk;25.1.8937393"
+          fi
+          
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.1.8937393" >> $GITHUB_ENV
-          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
 
       - name: Build APK
         run: |
